@@ -1,6 +1,7 @@
 package com.utils.office;
 
 
+import jdk.internal.util.xml.impl.Input;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -26,19 +27,17 @@ public class ExcelUtils {
 	 * @return
 	 */
 	public static List<Object[]> readWorkbook(InputStream in) {
-		return readWorkbook(in, 0);
+	    return readWorkbookByLimit(in, 0, 0, 0);
 	}
 
-	public static List<Object[]> readWorkbook(InputStream in, int sheetNum) {
-		Workbook wb = null;
-		try {
-			wb = WorkbookFactory.create(in);
-			Sheet sheet = wb.getSheetAt(sheetNum);
-			return readSheet(sheet, 0, sheet.getPhysicalNumberOfRows());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<>();
+    /**
+     * 读取workbook
+     * @param in InputStream
+     * @param sheetNum sheet序号
+     * @return
+     */
+	public static List<Object[]> readWorkbookBySheetNum(InputStream in, int sheetNum) {
+		return readWorkbookByLimit(in, sheetNum, 0, 0);
 	}
 
 	/**
@@ -47,36 +46,52 @@ public class ExcelUtils {
 	 * @param sheetName sheet名称
 	 * @return
 	 */
-	public static List<Object[]> readWorkbook(InputStream in, String sheetName) {
-		Workbook wb = null;
-		try {
-			wb = WorkbookFactory.create(in);
-			Sheet sheet = wb.getSheet(sheetName);
-			return readSheet(sheet, 0, sheet.getPhysicalNumberOfRows());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<>();
+	public static List<Object[]> readWorkbookBySheetName(InputStream in, String sheetName) {
+		return readWorkbookByLimit(in, sheetName, 0, 0);
 	}
 
 	/**
 	 * 读取workbook
 	 * @param in InputStream
-	 * @param sheetName sheet名称
-	 * @param startRowNum 开始行号
-	 * @param endRowNum 结束行号
+	 * @param startNum 开始行号
+	 * @param endNum 结束行号
 	 * @return
 	 */
-	public static List<Object[]> readWorkbook(InputStream in, String sheetName, int startRowNum, int endRowNum) {
-		Workbook wb = null;
-		try {
-			wb = WorkbookFactory.create(in);
-			return readSheet(wb.getSheet(sheetName), startRowNum, endRowNum);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<>();
+	public static List<Object[]> readWorkbookByLimit(InputStream in, int startNum, int endNum) {
+		return readWorkbookByLimit(in, 0, startNum, endNum);
 	}
+
+    /**
+     * 读取workbook
+     * @param in InputStream
+     * @param sheetName sheet名称
+     * @param startNum 开始行号
+     * @param endNum 结束行号
+     * @return
+     */
+    public static List<Object[]> readWorkbookByLimit(InputStream in, String sheetName, int startNum, int endNum) {
+        return readWorkbookByLimit(in, getSheetNum(in, sheetName), startNum, endNum);
+    }
+
+    /**
+     * 读取workbook
+     * @param in InputStream
+     * @param sheetNum sheet名称
+     * @param startNum 开始行号
+     * @param endNum 结束行号
+     * @return
+     */
+    public static List<Object[]> readWorkbookByLimit(InputStream in, int sheetNum, int startNum, int endNum) {
+        Workbook wb = null;
+        try {
+            wb = WorkbookFactory.create(in);
+            return readSheetByLimit(wb.getSheetAt(sheetNum), startNum, endNum);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
 
 	/**
 	 * 读取workbook
@@ -84,7 +99,7 @@ public class ExcelUtils {
 	 * @return
 	 */
 	public static List<Object[]> readWorkbook(String filePath) {
-		return readWorkbook(filePath, 0);
+		return readWorkbookByLimit(filePath, 0, 0, 0);
 	}
 
 	/**
@@ -93,16 +108,8 @@ public class ExcelUtils {
 	 * @param sheetNum sheet名称
 	 * @return
 	 */
-	public static List<Object[]> readWorkbook(String filePath, int sheetNum) {
-		try(InputStream in = new FileInputStream(filePath)) {
-			Workbook wb = WorkbookFactory.create(in);
-			return readSheet(wb.getSheetAt(sheetNum));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<>();
+	public static List<Object[]> readWorkbookBySheetNum(String filePath, int sheetNum) {
+		return readWorkbookByLimit(filePath, sheetNum, 0, 0);
 	}
 
 	/**
@@ -111,64 +118,79 @@ public class ExcelUtils {
 	 * @param sheetName sheet名称
 	 * @return
 	 */
-	public static List<Object[]> readWorkbook(String filePath, String sheetName) {
-		try(InputStream in = new FileInputStream(filePath)) {
-			Workbook wb = WorkbookFactory.create(in);
-			return readSheet(wb.getSheet(sheetName));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<>();
+	public static List<Object[]> readWorkbookBySheetName(String filePath, String sheetName) {
+		return readWorkbookByLimit(filePath, sheetName, 0, 0);
+	}
+
+	/**
+	 * 读取workbook
+	 * @param filePath 文件路径
+	 * @param startNum 开始行号
+	 * @param endNum 结束行号
+	 * @return
+	 */
+	public static List<Object[]> readWorkbookByLimit(String filePath, int startNum, int endNum) {
+		return readWorkbookByLimit(filePath, 0, startNum, endNum);
 	}
 
 	/**
 	 * 读取workbook
 	 * @param filePath 文件路径
 	 * @param sheetName sheet名称
-	 * @param startRowNum 开始行号
-	 * @param endRowNum 结束行号
+	 * @param startNum 开始行号
+	 * @param endNum 结束行号
 	 * @return
 	 */
-	public static List<Object[]> readWorkbook(String filePath, String sheetName, int startRowNum, int endRowNum) {
-		try(InputStream in = new FileInputStream(filePath)) {
-			Workbook wb = WorkbookFactory.create(in);
-			return readSheet(wb.getSheet(sheetName), startRowNum, endRowNum);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return new ArrayList<>();
+	public static List<Object[]> readWorkbookByLimit(String filePath, String sheetName, int startNum, int endNum) {
+		return readWorkbookByLimit(filePath, getSheetNum(filePath, sheetName), startNum, endNum);
 	}
+
+    /**
+     * 读取workbook
+     * @param filePath 文件路径
+     * @param sheetNum sheet序号
+     * @param startNum 开始行号
+     * @param endNum 结束行号
+     * @return
+     */
+    public static List<Object[]> readWorkbookByLimit(String filePath, int sheetNum, int startNum, int endNum) {
+        try(InputStream in = new FileInputStream(filePath)) {
+            return readWorkbookByLimit(in, sheetNum, startNum, endNum);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
 
 	/**
 	 * 读取Sheet数据
-	 * @param sheet
+	 * @param sheet Sheet对象
 	 * @return
 	 */
 	public static List<Object[]> readSheet(Sheet sheet) {
-		return readSheet(sheet, 0, sheet.getPhysicalNumberOfRows());
+		return readSheetByLimit(sheet, 0, sheet.getPhysicalNumberOfRows());
 	}
 
 	/**
 	 * 读取Sheet数据
 	 * @param sheet Sheet
-	 * @param startRowNum 开始行号
-	 * @param endRowNum 结束行号
+	 * @param startNum 开始行号
+	 * @param endNum 结束行号
 	 * @return
 	 */
-	public static List<Object[]> readSheet(Sheet sheet, int startRowNum, int endRowNum) {
+	public static List<Object[]> readSheetByLimit(Sheet sheet, int startNum, int endNum) {
 		List<Object[]> list = new ArrayList<>();
-		//总行数
-		int rowRums= sheet.getPhysicalNumberOfRows();
-		for(int i = startRowNum - 1; i < endRowNum; i++) {
+        //计算区间
+		if(startNum == 0) startNum = 1;
+		if(endNum == 0) endNum = sheet.getPhysicalNumberOfRows();
+		//遍历区间
+		for(int i = startNum - 1; i < endNum; i++) {
 			Row row = sheet.getRow(i);
 			if(row == null) {
 			    continue;
             }
-			//总列数
 			int cellNums = row.getPhysicalNumberOfCells();
 			Object[] arr = new Object[cellNums];
 			for(int j = 0; j < cellNums; j++) {
@@ -178,5 +200,72 @@ public class ExcelUtils {
 		}
 		return list;
 	}
+
+    /**
+     * 获取Sheet序号
+     * @param filePath 文件路径
+     * @param sheetName Sheet名称
+     * @return
+     */
+	public static int getSheetNum(String filePath, String sheetName) {
+        try(InputStream in = new FileInputStream(filePath)) {
+            Workbook wb = WorkbookFactory.create(new FileInputStream(filePath));
+            return wb.getSheetIndex(sheetName);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+
+    /**
+     * 获取Sheet序号
+     * @param in InputStream
+     * @param sheetName Sheet名称
+     * @return
+     */
+    public static int getSheetNum(InputStream in, String sheetName) {
+        try {
+            return WorkbookFactory.create(in).getSheetIndex(sheetName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    /**
+     * 获取Sheet名称
+     * @param filePath 文件路径
+     * @param sheetNum Sheet序号
+     * @return
+     */
+    public static String getSheetName(String filePath, int sheetNum) {
+        try(InputStream in = new FileInputStream(filePath)) {
+            Workbook wb = WorkbookFactory.create(in);
+            return wb.getSheetName(sheetNum);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * 获取Sheet名称
+     * @param in InputStream
+     * @param sheetName Sheet名称
+     * @return
+     */
+    public static String getSheetName(InputStream in, int sheetName) {
+        try {
+            return WorkbookFactory.create(in).getSheetName(sheetName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
 }
